@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>simulation</title>
+    <style>
+        body,
+        html {
+            color: white;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: Arial;
+        }
+
+        canvas {
+            display: block;
+            cursor: none;
+            background-color: black;
+        }
+
+        #toggleMenu {
+            transition: 150ms ease-out;
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            height: 50px;
+            width: 50px;
+            border-radius: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: 900;
+            z-index: 2;
+
+            &:hover {
+                transform: rotate(10deg) scale(1.1);
+                cursor: pointer;
+            }
+        }
+
+        a {
+            text-decoration: none;
+            color: white;
+        }
+
+        #menu {
+            position: absolute;
+            padding: 10px;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            background-color: rgba(255, 255, 255, 0.1);
+            display: none;
+            backdrop-filter: blur(10px);
+            overflow-y: scroll;
+
+            & section {
+                width: 100%;
+                padding: 10px 0;
+                border-bottom: 1px solid gray;
+
+                & h1 {
+                    height: 10%;
+                    width: 100%;
+                }
+            }
+        }
+
+        ::-webkit-scrollbar {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toggleMenu">
+        ☰
+    </div>
+    <div id="menu">
+        <section>
+            <h1> Canvas </h1>
+            <p> Alpha </p>
+            <br />
+            <input type="range" id="canvasAlphaInput" min="0" max="1" step="0.01" value="1"
+                onchange="updateCanvasAlpha()" />
+        </section>
+
+        <section>
+            <h1> Connector Settings </h1>
+            <p> color </p>
+            <input type="color" id="connectorColorInput" onchange="updateConnectorColor()" />
+            <p> glow color </p>
+            <input type="color" id="connectorGlowInput" onchange="updateConnectorGlow()" />
+            <p> Connector Scale </p>
+            <input type="range" id="connectorScaleInput" min="0" max="25" step="1" value="1"
+                onchange="updateConnectorScale()" />
+            <p> Connector Amount </p>
+            <input type="range" id="connectorAmountInput" min="0" max="1000" step="1" value="100"
+                onchange="updateConnectorAmount()" />
+            <p> Connector Glow Strength </p>
+            <input type="range" id="connectorGlowStrengthInput" min="0" max="100" step="1" value="10"
+                onchange="updateConnectorGlowStrength()" />
+        </section>
+
+        <section>
+            <h1> Ray Settings </h1>
+            <p> color </p>
+            <input type="color" id="rayColorInput" value="white" onchange="updateRayColor()" />
+            <p> glow color </p>
+            <input type="color" id="rayGlowInput" value="white" onchange="updateRayGlow()" />
+            <p> Ray Scale </p>
+            <input type="range" id="rayScaleInput" min="0" max="10" step="1" value="0.5" onchange="updateRayScale()" />
+            <p> Ray Glow Strength </p>
+            <input type="range" id="rayGlowStrengthInput" min="0" max="100" step="1" value="10"
+                onchange="updateRayGlowStrength()" />
+            <p> Max Ray Length </p>
+            <input type="number" id="rayMaxLengthInput" value="250" onchange="updateRayMaxLength()" />
+        </section>
+
+        <section>
+            <a href="https://github.com/noahSnbr07/SpiderSimulation"> GitHub Repo </a>
+            <br />
+            <a href="https://instagram.com/noah.snbr">Creator </a>
+        </section>
+    </div>
+    <canvas></canvas>
+    <script>
+        //grab elements
+        const canvas = document.querySelector("canvas");
+        const ctx = canvas.getContext("2d");
+        const toggleMenu = document.getElementById("toggleMenu");
+        const menu = document.getElementById("menu");
+
+        // Set canvas resolution
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const defaultSettings = {
+            connector: {
+                color: 'rgba(0, 0, 0, 0)',
+                glow: 'white',
+                glowStrength: 10,
+                scale: 10,
+                amount: 100,
+            },
+            ray: {
+                color: 'white',
+                glow: 'white',
+                glowStrength: 10,
+                scale: 1,
+                maxLength: 400
+            },
+            canvas: {
+                alpha: 1,
+                color: [0, 0, 0],
+            }
+        }
+
+        const configSettings = defaultSettings;
+
+        //Function to update connector color
+        function updateConnectorColor() {
+            const colorInput = document.getElementById("connectorColorInput");
+            defaultSettings.connector.color = colorInput.value;
+        }
+
+        // Function to update connector glow color
+        function updateConnectorGlow() {
+            const glowInput = document.getElementById("connectorGlowInput");
+            defaultSettings.connector.glow = glowInput.value;
+        }
+
+        // Function to update ray color
+        function updateRayColor() {
+            const colorInput = document.getElementById("rayColorInput");
+            defaultSettings.ray.color = colorInput.value;
+        }
+
+        // Function to update ray glow color
+        function updateRayGlow() {
+            const glowInput = document.getElementById("rayGlowInput");
+            defaultSettings.ray.glow = glowInput.value;
+        }
+
+        // Function to update canvas alpha
+        function updateCanvasAlpha() {
+            const alphaInput = document.getElementById("canvasAlphaInput");
+            defaultSettings.canvas.alpha = parseFloat(alphaInput.value);
+        }
+
+        // Function to update connector scale
+        function updateConnectorScale() {
+            const scaleInput = document.getElementById("connectorScaleInput");
+            defaultSettings.connector.scale = parseFloat(scaleInput.value);
+        }
+
+        // Function to update connector amount
+        function updateConnectorAmount() {
+            const amountInput = document.getElementById("connectorAmountInput");
+            defaultSettings.connector.amount = parseFloat(amountInput.value);
+            connections.length = 0;
+            initConnections(defaultSettings.connector.amount);
+        }
+
+        // Function to update connector glow strength
+        function updateConnectorGlowStrength() {
+            const glowStrengthInput = document.getElementById("connectorGlowStrengthInput");
+            defaultSettings.connector.glowStrength = parseFloat(glowStrengthInput.value);
+        }
+
+        // Function to update ray scale
+        function updateRayScale() {
+            const scaleInput = document.getElementById("rayScaleInput");
+            defaultSettings.ray.scale = parseFloat(scaleInput.value);
+        }
+
+        // Function to update max ray length
+        function updateRayMaxLength() {
+            const maxLengthInput = document.getElementById("rayMaxLengthInput");
+            defaultSettings.ray.maxLength = parseInt(maxLengthInput.value);
+        }
+
+        // Function to update ray glow strength
+        function updateRayGlowStrength() {
+            const glowStrengthInput = document.getElementById("rayGlowStrengthInput");
+            defaultSettings.ray.glowStrength = parseFloat(glowStrengthInput.value);
+        }
+
+        //make toggle button toggle the menu
+        toggleMenu.addEventListener("click", function () {
+            let currentStyle = window.getComputedStyle(menu);
+            menu.style.display = currentStyle.display === 'none' ? 'block' : 'none';
+        });
+
+        let connections = new Array();
+
+        //Connection Particle class
+        class Connection {
+            constructor(x, y, scale) {
+                this.x = x;
+                this.y = y;
+                this.scale = scale;
+            }
+        }
+
+        let mouseCoordinates = { x: 0, y: 0 };
+
+        canvas.onmousemove = function (e) {
+            mouseCoordinates.x = e.clientX;
+            mouseCoordinates.y = e.clientY;
+        }
+
+        //get distance between two points
+        function getDistance(pointOne, pointTwo) {
+            return Math.hypot(pointTwo.x - pointOne.x, pointTwo.y - pointOne.y);
+        }
+
+        //initialize a preset amount of Connectors
+        function initConnections(iterations) {
+            connections.length = 0;
+            for (let i = 0; i < iterations; i++) {
+
+                //get random coordinates both x and y
+                const randomX = Math.floor(Math.random() * canvas.width);
+                const randomY = Math.floor(Math.random() * canvas.height);
+
+                //add new connectors to array
+                connections.push(new Connection(randomX, randomY, defaultSettings.connector.scale));
+            }
+        }
+
+        //create a certain amount of connectors
+        initConnections(defaultSettings.connector.amount);
+
+        function simulationLoop() {
+            requestAnimationFrame(simulationLoop);
+
+            // clear rect with alpha for fade effect
+            ctx.fillStyle = `rgba(
+                 ${defaultSettings.canvas.color[0]},
+                 ${defaultSettings.canvas.color[1]},
+                 ${defaultSettings.canvas.color[2]}, 
+                 ${defaultSettings.canvas.alpha})`;
+
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // loop over all connectors and move them slightly
+            connections.forEach((connection, index) => {
+
+                //dont cast ray if distance is greater than a certain value
+                if (getDistance(mouseCoordinates, connection) >= defaultSettings.ray.maxLength) { return; }
+
+                //adapt settings for appearance of the connectors
+                ctx.fillStyle = defaultSettings.connector.color;
+                ctx.lineWidth = defaultSettings.connector.scale;
+                ctx.shadowColor = defaultSettings.connector.glow;
+                ctx.shadowBlur = defaultSettings.connector.glowStrength;
+
+                // draw circles as connectors
+                ctx.beginPath();
+                ctx.arc(connection.x, connection.y, defaultSettings.connector.scale, 0, 2 * Math.PI);
+                ctx.fill();
+
+                //adapt settings for appearance of the rays
+                ctx.strokeStyle = defaultSettings.ray.color;
+                ctx.lineWidth = defaultSettings.ray.scale;
+                ctx.shadowColor = defaultSettings.ray.glow;
+                ctx.shadowBlur = defaultSettings.ray.glowStrength;
+
+                // casting a line from the connection to the mouse
+                ctx.beginPath();
+                ctx.moveTo(connection.x, connection.y);
+                ctx.lineTo(mouseCoordinates.x, mouseCoordinates.y);
+                ctx.stroke();
+            });
+        }
+
+        //start the simulation
+        simulationLoop();
+
+    </script>
+</body>
+
+</html>
